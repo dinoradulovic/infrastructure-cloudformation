@@ -1,0 +1,243 @@
+Description:  This template deploys a VPC, with a pair of public and private subnets spread
+  across two Availability Zones. It deploys an internet gateway, with a default
+  route on the public subnets.
+Parameters:
+  UserData:
+    Type: String
+    Description: User data script to initialize the EC2 instance
+  VPCCidr: 
+    Type: String
+    Description: Valid VPC CIDR IPv4 block
+  VPCName:
+    Type: String
+    Description: Name tag for VPC resource
+  PublicSubnetCIDR: 
+    Type: String
+    Description: Valid Public Subnet CIDR IPv4 block
+  PublicSubnetAZ:
+    Type: String
+    Description: Public Subnet Availability Zone
+  PublicSubnetName:
+    Type: String
+    Description: Name tag for Public Subnet
+  PublicSubnetRouteTableName:
+    Type: String
+    Description: Name tag for Public Subnet Route Table
+  PrivateSubnet1CIDR:
+    Type: String
+    Description: Valid Private Subnet 1 CIDR IPv4 block
+  PrivateSubnet1AZ:
+    Type: String
+    Description: Private Subnet 1 Availability Zone
+  PrivateSubnet1Name:
+    Type: String
+    Description: Name tag for Private Subnet 1
+  PrivateSubnet2CIDR:
+    Type: String
+    Description: Valid Private Subnet 2 CIDR IPv4 block
+  PrivateSubnet2AZ:
+    Type: String
+    Description: Private Subnet 2 Availability Zone
+  PrivateSubnet2Name:
+    Type: String
+    Description: Name tag for Private Subnet 2
+  PrivateSubnetsRouteTableName:
+    Type: String
+    Description: Name tag for Private Subnets Route Table
+  DBSubnetGroupName:
+    Type: String
+    Description: Database Subnet Group for RDS instances
+  KeyPairName:
+    Type: String
+    Description: Name of an existing EC2 KeyPair to enable SSH access into the app server
+  AMIImageID: 
+    Type: String
+    Description: Valid AMI Image ID for EC2 Instance
+  MyIpAddress:
+    Type: String
+    Description: Ip address to allow SSH access to EC2 instance
+  AppServerSecurityGroupName:
+    Type: String
+    Description: Name tag for App Server Security Group
+  DBSecurityGroupName:
+    Type: String
+    Description: Name tag for DB Server Security Group
+  DBInstanceIdentifier:
+    Type: String
+    Description: RDS DB Instance identifier 
+  DBMasterUsername:
+    Type: String
+    Description: DB Master Username
+  DBMasterPassword:
+    Type: String
+    Description: DB Master Password
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VPCCidr
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref VPCName
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet: 
+    Type: AWS::EC2::Subnet
+    Properties: 
+      CidrBlock: !Ref PublicSubnetCIDR
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Ref PublicSubnetAZ
+      Tags:
+        - Key: Name
+          Value: !Ref PublicSubnetName
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Ref PublicSubnetRouteTableName
+  PublicRoute1: # Public route table has direct routing to IGW:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet
+      RouteTableId:
+        Ref: PublicRouteTable
+  PrivateSubnet1: 
+    Type: AWS::EC2::Subnet
+    Properties: 
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref PrivateSubnet1AZ
+      Tags:
+        - Key: Name
+          Value: !Ref PrivateSubnet1Name
+  PrivateSubnet2: 
+    Type: AWS::EC2::Subnet
+    Properties: 
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref PrivateSubnet2AZ
+      Tags:
+        - Key: Name
+          Value: !Ref PrivateSubnet2Name
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Ref PrivateSubnetsRouteTableName
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet1
+      RouteTableId:
+        Ref: PrivateRouteTable
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet2
+      RouteTableId:
+        Ref: PrivateRouteTable
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties: 
+      DBSubnetGroupDescription: "DB Subnet Group Description"
+      DBSubnetGroupName: !Ref DBSubnetGroupName
+      SubnetIds: 
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupName: !Ref AppServerSecurityGroupName
+        GroupDescription: Security group for the App Server instance
+        VpcId:
+          Ref: VPC
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 
+            !Join
+              - ''
+              - - !Ref MyIpAddress
+                - "/32"
+  Ec2Instance: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      SubnetId: !Ref PublicSubnet
+      ImageId: !Ref AMIImageID
+      KeyName: !Ref KeyPairName
+      InstanceType: t2.micro
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      UserData: !Ref UserData
+      Tags:
+        - Key: Name
+          Value: app-server
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupName: !Ref DBSecurityGroupName
+        GroupDescription: Security group for the database instance
+        VpcId:
+          Ref: VPC
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 
+            !Join
+              - ''
+              - - !GetAtt Ec2Instance.PrivateIp
+                - "/32"
+  DB:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBInstanceClass: db.t3.micro
+      PubliclyAccessible: false
+      AllocatedStorage: 20
+      DBInstanceIdentifier: !Ref DBInstanceIdentifier
+      DBSubnetGroupName:
+        Ref: DBSubnetGroup
+      Engine: postgres
+      MasterUsername: !Ref DBMasterUsername
+      MasterUserPassword: !Ref DBMasterPassword
+      VPCSecurityGroups: 
+        - !Ref DatabaseSecurityGroup
+Outputs:
+  EC2PublicIp:
+    Description: "EC2 instance public IP address"
+    Value: !GetAtt Ec2Instance.PublicIp
+  EC2InstanceSecurityGroup:
+    Description: "Security group assigned to EC2 instance in Public Subnet"
+    Value: !Ref InstanceSecurityGroup
+  DatabaseEndpoint:
+    Description: "Database hostname"
+    Value: !GetAtt DB.Endpoint.Address
+  DatabaseSecurityGroup:
+    Description: "Security group assigned to RDS instance in Private Subnet"
+    Value: !Ref DatabaseSecurityGroup
