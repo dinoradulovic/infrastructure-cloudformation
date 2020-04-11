@@ -1,6 +1,6 @@
 # AWS Backend APIs Infrastructure (Cloudformation)
 
-This repo contains a cloudformation template and accompanying files to create the network infrastructure on AWS for deploying Backend APIs.
+This repo contains a cloudformation template and accompanying files to create the network infrastructure on AWS for deploying Backend APIs.  
 To see the same AWS Infrastructure setup using AWS CLI visit:
 <https://github.com/dinoradulovic/infrastructure-scripts-aws-cli>
 
