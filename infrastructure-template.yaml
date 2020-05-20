@@ -53,6 +53,9 @@ Parameters:
   AMIImageID: 
     Type: String
     Description: Valid AMI Image ID for EC2 Instance
+  InstanceName: 
+    Type: String
+    Description: Name Tag for EC2 Instance
   MyIpAddress:
     Type: String
     Description: Ip address to allow SSH access to EC2 instance
@@ -197,7 +200,7 @@ Resources:
       UserData: !Ref UserData
       Tags:
         - Key: Name
-          Value: app-server
+          Value: !Ref InstanceName
   DatabaseSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:

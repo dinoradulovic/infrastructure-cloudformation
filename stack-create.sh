@@ -27,6 +27,7 @@ ParameterKey=PrivateSubnetsRouteTableName,ParameterValue=$PRIVATE_SUBNETS_ROUTE_
 ParameterKey=DBSubnetGroupName,ParameterValue=$DB_SUBNET_GROUP_NAME \
 ParameterKey=KeyPairName,ParameterValue=$KEY_PAIR_NAME \
 ParameterKey=AMIImageID,ParameterValue=$AMI_IMAGE_ID \
+ParameterKey=InstanceName,ParameterValue=$INSTANCE_NAME \
 ParameterKey=MyIpAddress,ParameterValue=$MY_PUBLIC_IP \
 ParameterKey=AppServerSecurityGroupName,ParameterValue=$APP_SERVER_SECURITY_GROUP_NAME \
 ParameterKey=DBSecurityGroupName,ParameterValue=$DATABASE_SECURITY_GROUP_NAME \
